@@ -1,0 +1,125 @@
+@startuml
+title Tutor Educativo con IA – Componentes Principales
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam rectangle {
+  BorderColor #666
+  FontColor #1a1a1a
+}
+skinparam package {
+  BorderColor #888
+  FontColor #1a1a1a
+}
+skinparam note {
+  BackgroundColor #fffbe6
+  BorderColor #c9a227
+}
+
+' =======================
+' FRONTEND
+' =======================
+package "Frontend\n(HTML, CSS y JavaScript)" as FRONTEND #FFFFFF {
+  component "index.html\n(UI)" as ui
+  component "uploadFile()\nfetch POST /upload" as js_upload
+  component "sendMessage()\nfetch POST /chat" as js_chat
+  component "generateQuestions()\nfetch POST /generate-questions" as js_questions
+  ui -[hidden]-> js_upload
+  ui -[hidden]-> js_chat
+  ui -[hidden]-> js_questions
+}
+
+' =======================
+' BACKEND
+' =======================
+package "Backend\n(Flask – rutas y lógica de negocio)" as BACKEND {
+  component "IndexController\nGET /\nrender_template('index.html')" as c_index
+  component "UploadController\nPOST /upload" as c_upload
+  component "ChatController\nPOST /chat" as c_chat
+  component "QuestionsController\nPOST /generate-questions" as c_questions
+
+  note right of c_upload
+  - Valida archivo y extensión
+  - Guarda PDF en uploads/
+  - Actualiza session (book_path, book_title)
+  end note
+
+  note right of c_chat
+  - Construye system_prompt
+  - Lee texto del libro (vía get_book_text)
+  - Recorta contexto (~3000 chars)
+  - Llama a OpenAI
+  end note
+
+  note right of c_questions
+  - Lee texto del libro
+  - Genera 5 preguntas (infantil)
+  - Contexto ~2000 chars
+  end note
+}
+
+' =======================
+' PROCESAMIENTO DE TEXTO
+' =======================
+package "Procesamiento de texto\n(PyPDF2 – extracción desde PDF)" as TEXT {
+  component "extract_text_from_pdf()\n(PyPDF2)" as h_extract
+  component "get_book_text()\n(usar session['book_path'])" as h_getbook
+}
+
+' =======================
+' MOTOR DE IA
+' =======================
+package "Motor de IA\n(OpenAI – GPT-3.5-turbo)" as AI {
+  component "ensure_openai_client()\n(config desde OPENAI_API_KEY)" as h_openai
+  component "OpenAI Chat Completions API\n(model='gpt-3.5-turbo')" as openai
+}
+
+' =======================
+' GESTIÓN DE SESIÓN
+' =======================
+package "Gestión de sesión\n(estado temporal de conversación)" as SESSION {
+  component "Flask session\n(book_path, book_title)" as sess
+  component "uploads/\n(archivos PDF en disco)" as uploads
+}
+
+' =======================
+' FLUJOS FRONTEND -> BACKEND
+' =======================
+ui --> c_index : GET /
+js_upload --> c_upload : POST /upload\n(file: PDF)
+js_chat --> c_chat : POST /chat\n(JSON {message})
+js_questions --> c_questions : POST /generate-questions
+
+' =======================
+' DEPENDENCIAS INTERNAS
+' =======================
+c_upload --> h_extract
+c_upload --> uploads
+c_upload --> sess
+
+c_chat --> h_getbook
+c_chat --> h_openai
+c_chat --> openai
+
+c_questions --> h_getbook
+c_questions --> h_openai
+c_questions --> openai
+
+h_getbook --> sess : leer book_path
+h_getbook --> uploads : abrir PDF
+
+' =======================
+' NOTAS GLOBALES
+' =======================
+note bottom of openai
+Requiere OPENAI_API_KEY
+end note
+
+legend left
+== Leyenda ==
+Paquetes = bloques principales del informe
+Flechas = llamadas/dependencias
+Componentes = unidades lógicas
+end legend
+
+@enduml

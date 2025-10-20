@@ -1,0 +1,6 @@
+# requirements.txt
+Flask>=2.3
+Werkzeug>=2.3
+PyPDF2>=3.0
+openai>=1.51.0,<2
+httpx<0.28

@@ -1,0 +1,65 @@
+# =======================================
+#  Python / Flask Project .gitignore
+# =======================================
+
+# --- Entorno virtual ---
+.venv/
+env/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Archivos temporales / caché ---
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.tmp
+*.bak
+*.old
+*.DS_Store
+Thumbs.db
+
+# --- Archivos de configuración ---
+*.env
+.env.*
+instance/
+config.py
+pyvenv.cfg
+
+# --- Flask uploads y contenido generado ---
+uploads/
+*.db
+*.sqlite3
+*.sqlite
+*.pdf
+*.tmp
+*.bak
+
+# --- Dependencias y paquetes ---
+# (Si usas wheel o build)
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- VS Code / PyCharm ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Archivos de sistema ---
+.DS_Store
+desktop.ini
+
+# --- Archivos de documentación / notas ---
+*.puml~
+*.bak
+*.tmp
+notes/
+logs/
