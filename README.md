@@ -89,6 +89,7 @@ app/
 - Modo de ayuda y edad configurables antes de cada mensaje.
 - El chat muestra la respuesta del agente, la cita del libro utilizada y la traza (`worker`, checklist y reintentos).
 - El generador de preguntas también expone la traza para facilitar auditorías educativas.
+- Mejoras de UX: chat con scroll/autoscroll, render Markdown y estado de “pensando”.
 
 ### Gestión de libros (seleccionar / cargar / eliminar)
 
