@@ -90,6 +90,13 @@ app/
 - El chat muestra la respuesta del agente, la cita del libro utilizada y la traza (`worker`, checklist y reintentos).
 - El generador de preguntas también expone la traza para facilitar auditorías educativas.
 
+### Gestión de libros (seleccionar / cargar / eliminar)
+
+- La tarjeta **Cargar Libro** lista automáticamente los PDFs existentes en `uploads/` (los más recientes primero).
+- Desde el selector puedes **usar** un libro existente (actualiza la sesión activa) o **eliminarlo** tras confirmar.
+- La subida de nuevos PDFs mantiene las validaciones previas y añade un sufijo único cuando existe colisión de nombres.
+- Si el libro seleccionado se elimina, el sistema limpia la sesión y el chat indicará que no hay libro disponible hasta elegir otro.
+
 ---
 
 ## 🛠️ Notas técnicas

@@ -37,6 +37,10 @@
         .questions-section {
             background-color: #fff8e1;
         }
+        .section h3 {
+            margin-top: 15px;
+            color: #2c3e50;
+        }
         button {
             background-color: #3498db;
             color: white;
@@ -48,6 +52,12 @@
         }
         button:hover {
             background-color: #2980b9;
+        }
+        button.danger {
+            background-color: #e74c3c;
+        }
+        button.danger:hover {
+            background-color: #c0392b;
         }
         input, textarea, select {
             width: 100%;
@@ -95,6 +105,27 @@
         .controls > div {
             flex: 1 1 150px;
         }
+        .upload-group {
+            margin-bottom: 20px;
+        }
+        .book-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .book-row select {
+            flex: 1 1 220px;
+            min-width: 200px;
+        }
+        .book-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-message {
+            margin-top: 10px;
+        }
         .trace {
             margin-top: 8px;
             padding-top: 6px;
@@ -116,9 +147,25 @@
 
         <div class="section upload-section">
             <h2>📄 Cargar Libro</h2>
-            <input type="file" id="fileInput" accept=".pdf">
-            <button onclick="uploadFile()">Cargar PDF</button>
-            <div id="uploadStatus"></div>
+
+            <div class="upload-group">
+                <h3>Libros existentes</h3>
+                <div class="book-row">
+                    <select id="bookSelect"></select>
+                    <div class="book-actions">
+                        <button id="useBookButton" type="button" onclick="useSelectedBook()">Usar libro</button>
+                        <button id="deleteBookButton" type="button" class="danger" onclick="deleteSelectedBook()">Eliminar libro</button>
+                    </div>
+                </div>
+                <div id="bookStatus" class="status-message"></div>
+            </div>
+
+            <div class="upload-group">
+                <h3>Cargar nuevo</h3>
+                <input type="file" id="fileInput" accept=".pdf">
+                <button type="button" onclick="uploadFile()">Cargar PDF</button>
+                <div id="uploadStatus" class="status-message"></div>
+            </div>
         </div>
 
         <div class="section chat-section">
@@ -151,7 +198,92 @@
     </div>
 
     <script>
-        let currentBook = null;
+        let currentBookPath = null;
+        let currentBookTitle = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshBookList();
+        });
+
+        function setCurrentBook(path, title) {
+            currentBookPath = path;
+            currentBookTitle = title;
+        }
+
+        function refreshBookList() {
+            fetch('/books')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showMessage('bookStatus', data.error, 'error');
+                        return;
+                    }
+
+                    populateBookSelect(data.items || []);
+                })
+                .catch(error => {
+                    showMessage('bookStatus', 'No se pudieron cargar los libros.', 'error');
+                    console.error('Error:', error);
+                });
+        }
+
+        function populateBookSelect(items) {
+            const select = document.getElementById('bookSelect');
+            const useButton = document.getElementById('useBookButton');
+            const deleteButton = document.getElementById('deleteBookButton');
+            select.innerHTML = '';
+            select.disabled = false;
+
+            if (!items.length) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay libros cargados';
+                option.disabled = true;
+                option.selected = true;
+                select.appendChild(option);
+                select.disabled = true;
+                setCurrentBook(null, null);
+                useButton.disabled = true;
+                deleteButton.disabled = true;
+                return;
+            }
+
+            let hasSelected = false;
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.path;
+                option.textContent = `${item.name} (${formatFileSize(item.size)})`;
+                if (item.selected) {
+                    option.selected = true;
+                    hasSelected = true;
+                    setCurrentBook(item.path, item.name);
+                }
+                select.appendChild(option);
+            });
+
+            if (!hasSelected) {
+                select.selectedIndex = 0;
+            }
+
+            useButton.disabled = false;
+            deleteButton.disabled = false;
+
+            if (!hasSelected) {
+                setCurrentBook(null, null);
+            }
+        }
+
+        function formatFileSize(size) {
+            if (size < 1024) {
+                return `${size} B`;
+            }
+            const kb = size / 1024;
+            if (kb < 1024) {
+                return `${kb.toFixed(1)} KB`;
+            }
+            const mb = kb / 1024;
+            return `${mb.toFixed(2)} MB`;
+        }
 
         function uploadFile() {
             const fileInput = document.getElementById('fileInput');
@@ -172,14 +304,86 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    currentBook = data.title;
                     showMessage('uploadStatus', `Libro "${data.title}" cargado exitosamente`, 'success');
+                    setCurrentBook(data.path || null, data.title || null);
+                    refreshBookList();
+                    fileInput.value = '';
                 } else {
                     showMessage('uploadStatus', data.error || 'Error al cargar el archivo', 'error');
                 }
             })
             .catch(error => {
                 showMessage('uploadStatus', 'Error de conexión', 'error');
+                console.error('Error:', error);
+            });
+        }
+
+        function useSelectedBook() {
+            const select = document.getElementById('bookSelect');
+            const path = select.value;
+
+            if (!path) {
+                showMessage('bookStatus', 'Selecciona un libro de la lista.', 'error');
+                return;
+            }
+
+            fetch('/use-book', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ path })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('bookStatus', `Libro "${data.title}" seleccionado`, 'success');
+                    setCurrentBook(data.path || path, data.title || null);
+                    refreshBookList();
+                } else {
+                    showMessage('bookStatus', data.error || 'No se pudo seleccionar el libro.', 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('bookStatus', 'Error de conexión', 'error');
+                console.error('Error:', error);
+            });
+        }
+
+        function deleteSelectedBook() {
+            const select = document.getElementById('bookSelect');
+            const path = select.value;
+
+            if (!path) {
+                showMessage('bookStatus', 'Selecciona un libro de la lista.', 'error');
+                return;
+            }
+
+            if (!confirm('¿Seguro que quieres eliminar este libro?')) {
+                return;
+            }
+
+            fetch('/books', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ path })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('bookStatus', 'Libro eliminado correctamente.', 'success');
+                    if (currentBookPath === path) {
+                        setCurrentBook(null, null);
+                    }
+                    refreshBookList();
+                } else {
+                    showMessage('bookStatus', data.error || 'No se pudo eliminar el libro.', 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('bookStatus', 'Error de conexión', 'error');
                 console.error('Error:', error);
             });
         }
@@ -192,8 +396,8 @@
 
             if (!message) return;
 
-            if (!currentBook) {
-                addMessage('Primero carga un libro PDF', 'error');
+            if (!currentBookPath) {
+                addMessage('No hay libro cargado o seleccionado.', 'error');
                 return;
             }
 
@@ -226,8 +430,8 @@
         }
 
         function generateQuestions() {
-            if (!currentBook) {
-                showMessage('questionsResult', 'Primero carga un libro PDF', 'error');
+            if (!currentBookPath) {
+                showMessage('questionsResult', 'No hay libro cargado o seleccionado.', 'error');
                 return;
             }
 
