@@ -297,6 +297,8 @@ def chat():
         }
         if result.get("anchor"):
             response_payload["anchor"] = result.get("anchor")
+        if result.get("usage"):
+            response_payload["usage"] = result.get("usage")
         return jsonify(response_payload), 200
 
     except FileNotFoundError as e:
@@ -333,6 +335,7 @@ def generate_questions():
                 {
                     "questions": result.get("content"),
                     "trace": result.get("trace"),
+                    "usage": result.get("usage"),
                 }
             ),
             200,

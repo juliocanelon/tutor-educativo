@@ -4,6 +4,8 @@ from typing import Any, Dict
 
 from openai import OpenAI
 
+from app.utils.usage import extract_usage
+
 OPTIMIZER_PROMPT = (
     "Eres un tutor experimentado que mejora respuestas educativas según la retroalimentación del evaluador. "
     "Respeta siempre el contexto del libro y la edad del estudiante."
@@ -30,7 +32,8 @@ class ResponseOptimizer:
 
         system_prompt = (
             f"{OPTIMIZER_PROMPT} Estás corrigiendo la salida de {worker_name}. "
-            "Debes asegurar que los criterios fallidos se cumplan."
+            "Debes asegurar que los criterios fallidos se cumplan y conservar la"
+            " adecuación al nivel de edad indicado."
         )
 
         fragment = context.get("context", "")
@@ -57,4 +60,6 @@ class ResponseOptimizer:
             max_tokens=400,
         )
 
-        return completion.choices[0].message.content.strip()
+        usage = extract_usage(completion)
+        answer = completion.choices[0].message.content.strip()
+        return {"content": answer, "usage": usage}
