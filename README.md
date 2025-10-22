@@ -1,133 +1,106 @@
 # 📘 Tutor Educativo con IA
 
-Una aplicación web desarrollada con **Flask** que utiliza la **API de OpenAI** para ayudar a los niños a comprender libros y fortalecer sus habilidades de lectura y comprensión.
+Aplicación web construida con **Flask** y la **API de OpenAI** que guía a niñas y niños durante la lectura de un libro en PDF. A partir del texto cargado, el sistema genera respuestas ancladas al material, aclara vocabulario complejo y crea evaluaciones con control de calidad pedagógica.
 
-## ✨ Características
+## ✨ Novedades principales
 
-- 📄 **Carga de PDFs:** Permite subir archivos PDF y extraer su texto automáticamente.  
-- 💬 **Chat educativo:** Usa GPT-3.5-Turbo para responder preguntas sobre el contenido del libro en un lenguaje simple y didáctico.  
-- ❓ **Generación de preguntas:** Crea 5 preguntas de comprensión lectora adaptadas para niños.  
+- 🧭 **Orchestrator–Workers**: un orquestador pedagógico enruta cada petición hacia workers especializados (tutor, vocabulario y evaluaciones).
+- ✅ **Evaluator–Optimizer**: cada salida pasa por un checklist pedagógico automático; si falla, se reescribe hasta dos veces antes de responder.
+- 🔖 **Respuestas con anclaje**: el tutor cita fragmentos del libro y propone mini-preguntas de seguimiento.
+- 🗂️ **Trazabilidad**: el frontend muestra el worker utilizado, resultados del checklist y número de reintentos.
+- 🎯 **Preguntas por niveles**: los cuestionarios se agrupan en bloques literal, inferencial y crítico con retroalimentación para el docente.
 
 ---
 
 ## ⚙️ Instalación
 
-### 1. Clonar o descargar el proyecto
-```bash
-git clone https://github.com/tu_usuario/tutor-educativo-ia.git
-cd tutor-educativo-ia
-```
-
-### 2. Crear entorno virtual
-**Windows (PowerShell):**
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-**Linux / macOS:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Instalar dependencias
-El proyecto usa versiones compatibles para evitar errores con `httpx` y `openai`:
-
-```bash
-pip install -r requirements.txt
-```
-
-Tu `requirements.txt` debe incluir:
-```txt
-Flask>=2.3
-Werkzeug>=2.3
-PyPDF2>=3.0
-openai>=1.51.0,<2
-httpx<0.28
-```
-
-### 4. Configurar la API key de OpenAI
-Obtén tu API key en: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-
-**Windows (PowerShell):**
-```bash
-$env:OPENAI_API_KEY = "tu_api_key_aqui"
-```
-
-**Linux / macOS:**
-```bash
-export OPENAI_API_KEY="tu_api_key_aqui"
-```
-
-> 💡 No es necesario un archivo `.env`. La aplicación toma la clave directamente de la variable de entorno.
-
----
-
-## 🚀 Ejecución del proyecto
-
-1. **Iniciar la aplicación:**
+1. **Clonar el proyecto**
    ```bash
-   python main.py
+   git clone https://github.com/tu_usuario/tutor-educativo-ia.git
+   cd tutor-educativo-ia
    ```
 
-2. **Abrir en el navegador:**
-   ```
-   http://127.0.0.1:5000
+2. **Crear entorno virtual**
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # Linux / macOS
+   source .venv/bin/activate
    ```
 
-3. **Uso:**
-   - Sube un libro en formato **PDF** desde la interfaz web.  
-   - La aplicación extrae el texto y guarda **solo la ruta del archivo** (no el contenido) por seguridad y eficiencia.  
-   - Puedes:
-     - Chatear con el tutor virtual sobre el contenido del libro.  
-     - Generar preguntas de comprensión lectora.
+3. **Instalar dependencias**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configurar la API key de OpenAI**
+   ```bash
+   # Windows PowerShell
+   $env:OPENAI_API_KEY = "tu_api_key_aqui"
+
+   # Linux / macOS
+   export OPENAI_API_KEY="tu_api_key_aqui"
+   ```
 
 ---
 
-## 🧩 Estructura del Proyecto
+## 🚀 Ejecución
+
+```bash
+python main.py
+```
+
+Visita [http://127.0.0.1:5000](http://127.0.0.1:5000) para usar la interfaz web.
+
+1. Carga un PDF (se guarda solo la ruta en sesión).
+2. Elige modo **Explicación** o **Vocabulario** y chatea con el tutor.
+3. Genera preguntas de comprensión; el resultado incluye la traza del evaluador.
+
+---
+
+## 🧠 Arquitectura de agentes
 
 ```
-tutor-educativo-ia/
-├── main.py                  # Aplicación principal Flask
-├── templates/
-│   └── index.html           # Interfaz web
-├── uploads/                 # Carpeta donde se guardan los PDFs subidos
-├── requirements.txt         # Dependencias del proyecto
-└── tarea.md                 # Documento de evaluación universitaria
+app/
+├── data/
+│   └── storage.py         # Gestión de PDFs y extracción de texto
+├── nlp/
+│   └── rag.py             # Búsqueda ligera de fragmentos relevantes
+├── orchestrator/
+│   └── core.py            # Orquestador pedagógico
+├── quality/
+│   ├── evaluator.py       # Evaluación de checklist pedagógico
+│   └── optimizer.py       # Reescritura guiada por feedback
+└── workers/
+    ├── tutor.py           # Tutor con anclaje y mini-pregunta
+    ├── vocab.py           # Explicación de vocabulario complejo
+    └── evaluator_gen.py   # Generación de bloques de preguntas
 ```
 
----
-
-## 🧠 Tecnologías Utilizadas
-
-- **Flask** – Framework web en Python  
-- **OpenAI API (GPT-3.5-Turbo)** – Motor de lenguaje natural  
-- **PyPDF2** – Extracción de texto de archivos PDF  
-- **HTML / CSS / JavaScript** – Interfaz de usuario  
-- **Werkzeug** – Seguridad y manejo de archivos en Flask  
+- **Orchestrator** selecciona worker según el modo (`explicar`, `vocabulario`, `evaluar`) y coordina el ciclo Evaluator–Optimizer.
+- **Evaluator** valida criterios como `anchored`, `clarity`, `variety` o `feedback` usando prompts dedicados.
+- **Optimizer** vuelve a consultar a OpenAI cuando la salida no supera el checklist, con un máximo de dos reintentos.
 
 ---
 
-## 🛠️ Notas Técnicas
+## 🖥️ Interfaz
 
-- El pdf del libro se guarda su ruta en `uploads/`.
-- La app maneja errores comunes (falta de archivo, API key no configurada, libro no encontrado) con respuestas JSON claras.
-- `debug=True` está activo solo para desarrollo; desactívalo en entornos de producción.
-
----
-
-## 📚 Ejemplo de flujo de uso
-
-1. Cargar `cuentos_infantiles.pdf`  
-2. Preguntar:  
-   > ¿Por qué el lobo sopló la casa de los cerditos?
-
-3. Generar preguntas de comprensión:  
-   > - ¿Quiénes eran los personajes principales del cuento?  
-   > - ¿Qué materiales usaron los cerditos para construir sus casas?
+- Modo de ayuda y edad configurables antes de cada mensaje.
+- El chat muestra la respuesta del agente, la cita del libro utilizada y la traza (`worker`, checklist y reintentos).
+- El generador de preguntas también expone la traza para facilitar auditorías educativas.
 
 ---
 
-## 🧾 Licencia
-Este proyecto se distribuye bajo la licencia **MIT**. Puedes usarlo, modificarlo y compartirlo libremente.
+## 🛠️ Notas técnicas
+
+- Mantiene el flujo de archivos en `uploads/` y evita guardar el texto completo en sesión.
+- Llama a `gpt-3.5-turbo` con límites conservadores de `max_tokens` y temperatura por worker.
+- Manejo de errores centrado en respuestas JSON claras para faltas de archivo, credenciales y fallos inesperados.
+- `debug=True` solo para desarrollo local; ajusta según tus necesidades en producción.
+
+---
+
+## 📚 Licencia
+
+Proyecto distribuido bajo licencia **MIT**. ¡Siéntete libre de adaptarlo y mejorarlo! 

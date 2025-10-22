@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -49,17 +49,26 @@
         button:hover {
             background-color: #2980b9;
         }
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 10px;
             margin: 5px 0;
             border: 1px solid #ddd;
             border-radius: 5px;
+            box-sizing: border-box;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
         }
         .message {
             padding: 10px;
             margin: 5px 0;
             border-radius: 5px;
+        }
+        .message-content {
+            white-space: pre-wrap;
         }
         .user-message {
             background-color: #e3f2fd;
@@ -77,13 +86,34 @@
             background-color: #e8f5e8;
             color: #2e7d32;
         }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .controls > div {
+            flex: 1 1 150px;
+        }
+        .trace {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed rgba(0,0,0,0.1);
+            font-size: 0.85rem;
+            color: #4a4a4a;
+        }
+        .anchor {
+            margin-top: 6px;
+            font-style: italic;
+            color: #6d4c41;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📚 Tutor Educativo con IA</h1>
         <p>Una herramienta interactiva para ayudar a los niños a comprender libros y desarrollar habilidades de lectura.</p>
-        
+
         <div class="section upload-section">
             <h2>📄 Cargar Libro</h2>
             <input type="file" id="fileInput" accept=".pdf">
@@ -93,6 +123,19 @@
 
         <div class="section chat-section">
             <h2>💬 Chat con el Tutor</h2>
+            <div class="controls">
+                <div>
+                    <label for="modeSelect">Modo de ayuda</label>
+                    <select id="modeSelect">
+                        <option value="explicar">Explicación del texto</option>
+                        <option value="vocabulario">Vocabulario</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="ageInput">Edad del estudiante</label>
+                    <input type="number" id="ageInput" min="5" max="16" value="9">
+                </div>
+            </div>
             <div id="chatMessages"></div>
             <div>
                 <input type="text" id="messageInput" placeholder="Haz una pregunta sobre el libro..." onkeypress="handleKeyPress(event)">
@@ -113,7 +156,7 @@
         function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            
+
             if (!file) {
                 showMessage('uploadStatus', 'Por favor selecciona un archivo PDF', 'error');
                 return;
@@ -143,12 +186,14 @@
 
         function sendMessage() {
             const messageInput = document.getElementById('messageInput');
+            const modeSelect = document.getElementById('modeSelect');
+            const ageInput = document.getElementById('ageInput');
             const message = messageInput.value.trim();
-            
+
             if (!message) return;
-            
+
             if (!currentBook) {
-                showMessage('chatMessages', 'Primero carga un libro PDF', 'error');
+                addMessage('Primero carga un libro PDF', 'error');
                 return;
             }
 
@@ -160,12 +205,16 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify({
+                    message: message,
+                    mode: modeSelect.value,
+                    age: parseInt(ageInput.value, 10) || 9
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.response) {
-                    addMessage(data.response, 'assistant');
+                    addMessage(data.response, 'assistant', data.trace, data.anchor);
                 } else {
                     addMessage(data.error || 'Error en la respuesta', 'error');
                 }
@@ -182,15 +231,35 @@
                 return;
             }
 
+            const ageInput = document.getElementById('ageInput');
             fetch('/generate-questions', {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    age: parseInt(ageInput.value, 10) || 9
+                })
             })
             .then(response => response.json())
             .then(data => {
+                const container = document.getElementById('questionsResult');
+                container.innerHTML = '';
+
                 if (data.questions) {
-                    document.getElementById('questionsResult').innerHTML = 
-                        '<div class="message success"><strong>Preguntas generadas:</strong><br>' + 
-                        data.questions.replace(/\n/g, '<br>') + '</div>';
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'message success';
+
+                    const content = document.createElement('div');
+                    content.className = 'message-content';
+                    content.textContent = data.questions;
+                    wrapper.appendChild(content);
+
+                    if (data.trace) {
+                        wrapper.appendChild(buildTraceElement(data.trace));
+                    }
+
+                    container.appendChild(wrapper);
                 } else {
                     showMessage('questionsResult', data.error || 'Error al generar preguntas', 'error');
                 }
@@ -201,13 +270,53 @@
             });
         }
 
-        function addMessage(text, type) {
+        function addMessage(text, type, trace = null, anchor = null) {
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}-message`;
-            messageDiv.textContent = text;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = text;
+            messageDiv.appendChild(contentDiv);
+
+            if (anchor && type === 'assistant') {
+                const anchorDiv = document.createElement('div');
+                anchorDiv.className = 'anchor';
+                anchorDiv.textContent = `Referencia del libro: "${anchor}"`;
+                messageDiv.appendChild(anchorDiv);
+            }
+
+            if (trace && type === 'assistant') {
+                messageDiv.appendChild(buildTraceElement(trace));
+            }
+
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function buildTraceElement(trace) {
+            const traceDiv = document.createElement('div');
+            traceDiv.className = 'trace';
+
+            const checks = trace.checks || {};
+            const checkEntries = Object.entries(checks);
+            const checksText = checkEntries.length
+                ? checkEntries.map(([name, passed]) => `${passed ? '✔️' : '⚠️'} ${name}`).join(' · ')
+                : 'Sin datos de validación';
+
+            const lines = [
+                `Agente: ${trace.worker || 'N/A'}`,
+                `Reintentos: ${trace.retries ?? 0}`,
+                `Checklist: ${checksText}`
+            ];
+
+            if (trace.feedback) {
+                lines.push(`Feedback: ${trace.feedback}`);
+            }
+
+            traceDiv.textContent = lines.join(' | ');
+            return traceDiv;
         }
 
         function showMessage(elementId, text, type) {
