@@ -27,7 +27,7 @@ def get_book_metadata() -> Dict[str, str]:
     book_title = session.get("book_title", "Libro sin título")
 
     if not book_path:
-        raise FileNotFoundError("No hay libro cargado.")
+        raise FileNotFoundError("No hay libro cargado o seleccionado.")
     if not os.path.exists(book_path):
         raise FileNotFoundError("El archivo del libro no existe en el servidor.")
 
