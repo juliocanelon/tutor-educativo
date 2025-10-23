@@ -19,6 +19,7 @@ from app.data.storage import (
 )
 from app.orchestrator.core import Orchestrator
 from app.nlp.rag import build_context
+from app.nlp.visual_prompt import generate_book_image_prompt
 from app.quality.evaluator import ResponseEvaluator
 from app.quality.optimizer import ResponseOptimizer
 from app.quality.image_prompt_evaluator import ImagePromptEvaluator
@@ -230,23 +231,43 @@ def book_fragment():
     try:
         data = request.json or {}
         focus = (data.get("focus") or "").strip()
+        age = int(data.get("age", 9))
 
         book_content = load_book_text()
         metadata = get_book_metadata()
 
         context = build_context(book_content, focus or metadata.get("title"))
-        fragment = (context.get("context") or "")[:480].strip()
+        idea_context = (context.get("context") or "").strip()
+        if not idea_context:
+            return jsonify({"error": "No se pudo obtener contenido del libro para generar el prompt."}), 400
 
-        if not fragment:
-            return jsonify({"error": "No se pudo obtener un fragmento del libro."}), 400
+        client = ensure_openai_client()
+        prompt_payload = generate_book_image_prompt(
+            client,
+            title=metadata.get("title", "Libro"),
+            age=age,
+            book_context=idea_context,
+            focus=focus,
+        )
 
-        return jsonify({"fragment": fragment}), 200
+        return (
+            jsonify(
+                {
+                    "prompt": prompt_payload.get("prompt"),
+                    "reference": idea_context,
+                    "usage": prompt_payload.get("usage"),
+                }
+            ),
+            200,
+        )
 
     except FileNotFoundError as exc:
         return jsonify({"error": str(exc)}), 400
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     except Exception as exc:  # pragma: no cover - defensive
-        logger.exception("Error al obtener fragmento del libro")
-        return jsonify({"error": f"No se pudo obtener el fragmento: {exc}"}), 500
+        logger.exception("Error al generar prompt del libro")
+        return jsonify({"error": f"No se pudo generar el prompt: {exc}"}), 500
 
 
 @app.route("/use-book", methods=["POST"])
