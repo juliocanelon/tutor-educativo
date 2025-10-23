@@ -37,6 +37,9 @@
         .questions-section {
             background-color: #fff8e1;
         }
+        .image-section {
+            background-color: #f3f9f1;
+        }
         .section h3 {
             margin-top: 15px;
             color: #2c3e50;
@@ -218,6 +221,136 @@
             border-radius: 6px;
             background-color: rgba(255, 255, 255, 0.6);
         }
+        .image-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px 0 6px;
+        }
+        .image-gallery {
+            margin-top: 12px;
+            max-height: 360px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.75);
+        }
+        .image-gallery[data-empty="true"] {
+            align-items: center;
+            justify-content: center;
+            color: #607080;
+        }
+        .image-card {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(52, 152, 219, 0.18);
+            background-color: rgba(243, 248, 255, 0.85);
+        }
+        .image-thumb {
+            flex: 0 0 120px;
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: #f0f4ff;
+        }
+        .image-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-card-body {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .image-card-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .image-card-title {
+            margin: 0;
+            font-size: 1rem;
+            color: #2c3e50;
+        }
+        .image-card-time {
+            font-size: 0.85rem;
+            color: #607080;
+        }
+        .image-card-prompt {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #445869;
+        }
+        .image-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .image-card-actions button {
+            padding: 8px 14px;
+        }
+        .image-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .image-modal.is-visible {
+            display: flex;
+        }
+        .image-modal__content {
+            position: relative;
+            background: #ffffff;
+            border-radius: 12px;
+            max-width: min(90vw, 720px);
+            max-height: 90vh;
+            padding: 18px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .image-modal__image {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .image-modal__caption {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #2c3e50;
+        }
+        .image-modal__close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: #2c3e50;
+        }
+        .image-modal__close:focus {
+            outline: 2px solid #3498db;
+            outline-offset: 2px;
+        }
         .questions-block {
             margin: 12px;
         }
@@ -333,6 +466,18 @@
             .questions-results {
                 max-height: 260px;
             }
+            .image-card {
+                flex-direction: column;
+                align-items: center;
+            }
+            .image-thumb {
+                width: 100%;
+                max-width: 220px;
+                height: auto;
+            }
+            .image-thumb img {
+                height: auto;
+            }
         }
     </style>
 </head>
@@ -401,11 +546,36 @@
             <div id="questionsResult" class="questions-results" aria-live="polite" aria-atomic="false"></div>
         </div>
 
+        <div class="section image-section">
+            <h2>🎨 Creador Visual del Libro</h2>
+            <p class="mode-description">Describe una escena o deja que la IA construya un prompt inspirado en la idea principal del libro para generar ilustraciones acordes a la edad seleccionada.</p>
+            <label for="imagePromptInput">Describe la escena o personaje…</label>
+            <textarea id="imagePromptInput" rows="4" placeholder="Describe la escena o personaje..." aria-describedby="imageStatus"></textarea>
+            <div class="image-controls">
+                <button id="generatePromptButton" type="button">Generar prompt del libro</button>
+                <button id="generateImageButton" type="button">Generar imagen</button>
+            </div>
+            <div id="imageStatus" class="status-message" aria-live="polite"></div>
+            <div id="imageLoadingIndicator" class="loading-indicator" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+                <div class="spinner" aria-hidden="true"></div>
+                <span id="imageLoadingText">Generando ilustración…</span>
+            </div>
+            <div id="imageGallery" class="image-gallery" aria-live="polite" aria-atomic="false"></div>
+        </div>
+
         <div class="section metrics-section">
             <h2>📈 Métricas y Consumo</h2>
             <p class="mode-description">Visualiza el uso de tokens, llamadas realizadas y la latencia aproximada de cada solicitud. Se reinicia al activar un libro distinto.</p>
             <div id="metricsSummary" class="metrics-summary"></div>
             <div id="metricsHistory" class="metrics-history" aria-live="polite" aria-atomic="false"></div>
+        </div>
+    </div>
+
+    <div id="imageModal" class="image-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="image-modal__content" role="document">
+            <button type="button" class="image-modal__close" aria-label="Cerrar imagen">✕</button>
+            <img id="imageModalImg" alt="" class="image-modal__image">
+            <p id="imageModalCaption" class="image-modal__caption"></p>
         </div>
     </div>
 
@@ -415,10 +585,16 @@
         let isChatLoading = false;
         let isQuestionsLoading = false;
         let traceIdCounter = 0;
+        let isImageGenerating = false;
+        let lastImageContext = '';
+        let imageCounter = 0;
+        let imageModalPreviousFocus = null;
+
+        const DEFAULT_IMAGE_LOADING_TEXT = 'Generando ilustración…';
 
         const metricsState = {
             tokensByModel: {},
-            callsBySection: { chat: 0, questions: 0 },
+            callsBySection: { chat: 0, questions: 0, image: 0 },
             history: [],
         };
 
@@ -430,6 +606,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             refreshBookList();
             initModeDescription();
+            initImageCreator();
             renderMetrics();
         });
 
@@ -456,6 +633,7 @@
 
             if (changed) {
                 resetMetrics();
+                clearImageSection();
             }
 
             if ((options.clearHistory && changed) || (!path && previousPath)) {
@@ -486,6 +664,354 @@
                 container.innerHTML = '';
                 container.scrollTop = 0;
             }
+        }
+
+        function clearImageSection() {
+            lastImageContext = '';
+            imageCounter = 0;
+            const promptInput = document.getElementById('imagePromptInput');
+            if (promptInput) {
+                promptInput.value = '';
+            }
+            setImageStatus('');
+            renderImageEmptyState();
+        }
+
+        function renderImageEmptyState() {
+            const gallery = document.getElementById('imageGallery');
+            if (!gallery) return;
+            gallery.dataset.empty = 'true';
+            gallery.innerHTML = '<p class="empty-state">Aún no hay ilustraciones. Usa el creador visual para comenzar.</p>';
+            gallery.scrollTop = 0;
+        }
+
+        function initImageCreator() {
+            const generatePromptButton = document.getElementById('generatePromptButton');
+            const generateButton = document.getElementById('generateImageButton');
+
+            if (generatePromptButton) {
+                generatePromptButton.addEventListener('click', generateBookPrompt);
+            }
+            if (generateButton) {
+                generateButton.addEventListener('click', generateImageFromPrompt);
+            }
+
+            renderImageEmptyState();
+            setupImageModal();
+        }
+
+        function setupImageModal() {
+            const modal = document.getElementById('imageModal');
+            if (!modal) return;
+            const closeButton = modal.querySelector('.image-modal__close');
+
+            modal.addEventListener('click', event => {
+                if (event.target === modal) {
+                    closeImageModal();
+                }
+            });
+
+            if (closeButton) {
+                closeButton.addEventListener('click', () => closeImageModal());
+            }
+
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && modal.classList.contains('is-visible')) {
+                    closeImageModal();
+                }
+            });
+        }
+
+        function generateBookPrompt() {
+            if (isImageGenerating) {
+                return;
+            }
+            if (!currentBookPath) {
+                setImageStatus('Selecciona o carga un libro antes de generar un prompt.', 'error');
+                return;
+            }
+
+            const promptInput = document.getElementById('imagePromptInput');
+            const focus = promptInput ? promptInput.value.trim() : '';
+            const ageInput = document.getElementById('ageInput');
+            const age = parseInt(ageInput ? ageInput.value : '9', 10) || 9;
+
+            setImageStatus('');
+            setImageLoading(true, 'Generando prompt');
+
+            fetch('/book-fragment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ focus, age })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.prompt) {
+                        lastImageContext = data.reference || '';
+                        if (promptInput) {
+                            promptInput.value = data.prompt;
+                            promptInput.focus();
+                            const position = promptInput.value.length;
+                            if (typeof promptInput.setSelectionRange === 'function') {
+                                promptInput.setSelectionRange(position, position);
+                            }
+                        }
+                        setImageStatus('Prompt generado a partir de la idea principal del libro. Puedes ajustarlo antes de generar.', 'success');
+                    } else {
+                        setImageStatus(data.error || 'No se pudo generar el prompt del libro.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    setImageStatus('Error al generar el prompt del libro.', 'error');
+                })
+                .finally(() => {
+                    setImageLoading(false);
+                });
+        }
+
+        function setImageStatus(message, type = 'info') {
+            const container = document.getElementById('imageStatus');
+            if (!container) return;
+            if (!message) {
+                container.innerHTML = '';
+                return;
+            }
+            const statusClass = type === 'error' ? 'message error' : 'message success';
+            container.innerHTML = `<div class="${statusClass}">${escapeHtml(message)}</div>`;
+        }
+
+        function setImageLoading(isLoading, message) {
+            isImageGenerating = isLoading;
+            const generateButton = document.getElementById('generateImageButton');
+            const generatePromptButton = document.getElementById('generatePromptButton');
+            const indicator = document.getElementById('imageLoadingIndicator');
+            const promptInput = document.getElementById('imagePromptInput');
+            const gallery = document.getElementById('imageGallery');
+            const indicatorText = document.getElementById('imageLoadingText');
+
+            if (generateButton) {
+                generateButton.disabled = isLoading;
+            }
+            if (generatePromptButton) {
+                generatePromptButton.disabled = isLoading;
+            }
+            if (indicator) {
+                indicator.classList.toggle('is-active', isLoading);
+                indicator.setAttribute('aria-hidden', String(!isLoading));
+            }
+            if (indicatorText) {
+                if (isLoading) {
+                    indicatorText.textContent = message || DEFAULT_IMAGE_LOADING_TEXT;
+                } else {
+                    indicatorText.textContent = DEFAULT_IMAGE_LOADING_TEXT;
+                }
+            }
+            if (promptInput) {
+                promptInput.setAttribute('aria-busy', String(isLoading));
+            }
+            if (gallery) {
+                gallery.setAttribute('aria-busy', String(isLoading));
+            }
+        }
+
+        function generateImageFromPrompt() {
+            if (isImageGenerating) {
+                return;
+            }
+            if (!currentBookPath) {
+                setImageStatus('Selecciona o carga un libro antes de generar ilustraciones.', 'error');
+                return;
+            }
+
+            const promptInput = document.getElementById('imagePromptInput');
+            const ageInput = document.getElementById('ageInput');
+            const prompt = promptInput ? promptInput.value.trim() : '';
+
+            if (!prompt) {
+                setImageStatus('Escribe una descripción o genera un prompt del libro antes de crear la imagen.', 'error');
+                return;
+            }
+
+            setImageStatus('');
+            setImageLoading(true, DEFAULT_IMAGE_LOADING_TEXT);
+
+            const payload = {
+                prompt,
+                fragment: lastImageContext,
+                age: parseInt(ageInput ? ageInput.value : '9', 10) || 9,
+            };
+
+            const startedAt = performance.now();
+
+            fetch('/generate-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    recordMetrics('image', data.usage, startedAt);
+                    if (data.image && data.image.data_url) {
+                        appendImageCard(data.image, data.trace);
+                        lastImageContext = data.image.fragment || lastImageContext;
+                        setImageStatus('Imagen lista. Puedes descargarla o generar otra variación.', 'success');
+                    } else {
+                        setImageStatus(data.error || 'No se pudo generar la imagen.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    setImageStatus('Error de conexión al generar la imagen.', 'error');
+                    recordMetrics('image', null, startedAt);
+                })
+                .finally(() => {
+                    setImageLoading(false);
+                });
+        }
+
+        function appendImageCard(imagePayload, trace) {
+            const gallery = document.getElementById('imageGallery');
+            if (!gallery) return;
+
+            if (gallery.dataset.empty === 'true') {
+                gallery.innerHTML = '';
+                delete gallery.dataset.empty;
+            }
+
+            imageCounter += 1;
+            const illustrationTitle = `Ilustración ${imageCounter}`;
+            const card = document.createElement('div');
+            card.className = 'image-card';
+
+            const thumbWrapper = document.createElement('div');
+            thumbWrapper.className = 'image-thumb';
+            const img = document.createElement('img');
+            img.src = imagePayload.data_url;
+            const altSnippet = truncateText(imagePayload.prompt || '', 120);
+            img.alt = altSnippet ? `${illustrationTitle}. ${altSnippet}` : illustrationTitle;
+            thumbWrapper.appendChild(img);
+
+            const body = document.createElement('div');
+            body.className = 'image-card-body';
+
+            const header = document.createElement('div');
+            header.className = 'image-card-header';
+
+            const title = document.createElement('h3');
+            title.className = 'image-card-title';
+            title.textContent = illustrationTitle;
+
+            const timestamp = document.createElement('span');
+            timestamp.className = 'image-card-time';
+            const dateLabel = imagePayload.timestamp ? new Date(imagePayload.timestamp).toLocaleString() : new Date().toLocaleString();
+            timestamp.textContent = dateLabel;
+
+            header.append(title, timestamp);
+
+            const promptParagraph = document.createElement('p');
+            promptParagraph.className = 'image-card-prompt';
+            const promptLabel = imagePayload.prompt ? `Prompt final: ${imagePayload.prompt}` : 'Prompt final no disponible.';
+            promptParagraph.textContent = promptLabel;
+
+            const actions = document.createElement('div');
+            actions.className = 'image-card-actions';
+
+            const viewButton = document.createElement('button');
+            viewButton.type = 'button';
+            viewButton.textContent = 'Ver grande';
+            viewButton.addEventListener('click', () => {
+                openImageModal(imagePayload.data_url, illustrationTitle, imagePayload.prompt);
+            });
+
+            const downloadButton = document.createElement('button');
+            downloadButton.type = 'button';
+            downloadButton.textContent = 'Descargar';
+            const safeTitle = sanitizeFilename(currentBookTitle || 'ilustracion');
+            const filename = `${safeTitle || 'ilustracion'}-${String(imageCounter).padStart(2, '0')}.png`;
+            downloadButton.addEventListener('click', () => {
+                downloadImage(imagePayload.data_url, filename);
+            });
+
+            actions.append(viewButton, downloadButton);
+
+            body.append(header, promptParagraph, actions);
+
+            card.append(thumbWrapper, body);
+
+            if (trace) {
+                card.appendChild(buildTraceElement(trace));
+            }
+
+            gallery.appendChild(card);
+            scrollToBottom(gallery);
+        }
+
+        function openImageModal(dataUrl, title, promptText) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('imageModalImg');
+            const caption = document.getElementById('imageModalCaption');
+            const closeButton = modal ? modal.querySelector('.image-modal__close') : null;
+            if (!modal || !modalImg || !caption) return;
+
+            modalImg.src = dataUrl;
+            const captionText = truncateText(promptText || title || 'Ilustración del libro', 180);
+            caption.textContent = captionText;
+            modalImg.alt = captionText || title || 'Ilustración generada';
+
+            imageModalPreviousFocus = document.activeElement;
+            modal.classList.add('is-visible');
+            modal.setAttribute('aria-hidden', 'false');
+
+            if (closeButton) {
+                closeButton.focus();
+            }
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('imageModalImg');
+            if (!modal || !modalImg) return;
+
+            modalImg.src = '';
+            modal.classList.remove('is-visible');
+            modal.setAttribute('aria-hidden', 'true');
+
+            if (imageModalPreviousFocus && typeof imageModalPreviousFocus.focus === 'function') {
+                imageModalPreviousFocus.focus();
+            }
+            imageModalPreviousFocus = null;
+        }
+
+        function downloadImage(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename || 'ilustracion.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function sanitizeFilename(name) {
+            return (name || 'ilustracion')
+                .normalize('NFD').replace(/[^\w\s-]/g, '')
+                .trim()
+                .replace(/[\s_-]+/g, '-')
+                .toLowerCase();
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) {
+                return '';
+            }
+            if (text.length <= maxLength) {
+                return text;
+            }
+            return `${text.slice(0, maxLength - 1)}…`;
         }
 
         function scrollToBottom(element) {
@@ -871,7 +1397,7 @@
 
         function resetMetrics() {
             metricsState.tokensByModel = {};
-            metricsState.callsBySection = { chat: 0, questions: 0 };
+            metricsState.callsBySection = { chat: 0, questions: 0, image: 0 };
             metricsState.history = [];
             renderMetrics();
         }
@@ -885,6 +1411,7 @@
 
             const chatCalls = metricsState.callsBySection.chat || 0;
             const questionCalls = metricsState.callsBySection.questions || 0;
+            const imageCalls = metricsState.callsBySection.image || 0;
             const tokensEntries = Object.entries(metricsState.tokensByModel);
 
             const tokensMarkup = tokensEntries.length
@@ -897,6 +1424,7 @@
                 <div class="metric-row">
                     <div class="metric-pill">💬 Chat <strong>${chatCalls}</strong></div>
                     <div class="metric-pill">❓ Preguntas <strong>${questionCalls}</strong></div>
+                    <div class="metric-pill">🎨 Imágenes <strong>${imageCalls}</strong></div>
                 </div>
                 <div class="metric-group">
                     <h4>Consumo por modelo</h4>
@@ -906,13 +1434,14 @@
 
             const recentHistory = metricsState.history.slice(-6).reverse();
             if (!recentHistory.length) {
-                history.innerHTML = '<p class="empty-state">Envía un mensaje o genera preguntas para ver estadísticas.</p>';
+                history.innerHTML = '<p class="empty-state">Envía un mensaje o genera preguntas o imágenes para ver estadísticas.</p>';
                 return;
             }
 
+            const sectionLabels = { chat: 'Chat', questions: 'Preguntas', image: 'Imágenes' };
             history.innerHTML = recentHistory
                 .map(entry => {
-                    const sectionLabel = entry.section === 'chat' ? 'Chat' : 'Preguntas';
+                    const sectionLabel = sectionLabels[entry.section] || entry.section;
                     const timeLabel = escapeHtml(entry.timestamp.toLocaleTimeString());
                     const totalTokens = entry.usage.reduce((acc, event) => acc + Number(event.total_tokens || 0), 0);
                     const detailLines = entry.usage.length
@@ -1151,6 +1680,7 @@
                 clarity: 'Claridad',
                 safety: 'Seguridad',
                 structure: 'Estructura',
+                coherence: 'Coherencia',
             };
             const checksText = checkEntries.length
                 ? checkEntries
