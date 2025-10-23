@@ -18,11 +18,15 @@ from app.data.storage import (
     store_book_metadata,
 )
 from app.orchestrator.core import Orchestrator
+from app.nlp.rag import build_context
 from app.quality.evaluator import ResponseEvaluator
 from app.quality.optimizer import ResponseOptimizer
+from app.quality.image_prompt_evaluator import ImagePromptEvaluator
+from app.quality.image_prompt_optimizer import ImagePromptOptimizer
 from app.workers.evaluator_gen import EvalWorker
 from app.workers.tutor import TutorWorker
 from app.workers.vocab import VocabWorker
+from app.workers.image import ImageWorker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -152,10 +156,19 @@ def get_orchestrator() -> Orchestrator:
         TutorWorker.name: TutorWorker(client),
         VocabWorker.name: VocabWorker(client),
         EvalWorker.name: EvalWorker(client),
+        ImageWorker.name: ImageWorker(client),
     }
     evaluator = ResponseEvaluator(client)
     optimizer = ResponseOptimizer(client)
-    _orchestrator = Orchestrator(workers=workers, evaluator=evaluator, optimizer=optimizer)
+    image_prompt_evaluator = ImagePromptEvaluator(client)
+    image_prompt_optimizer = ImagePromptOptimizer(client)
+    _orchestrator = Orchestrator(
+        workers=workers,
+        evaluator=evaluator,
+        optimizer=optimizer,
+        image_prompt_evaluator=image_prompt_evaluator,
+        image_prompt_optimizer=image_prompt_optimizer,
+    )
     return _orchestrator
 
 
@@ -210,6 +223,30 @@ def get_books():
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Error al listar libros")
         return jsonify({"error": f"No se pudieron listar los libros: {exc}"}), 500
+
+
+@app.route("/book-fragment", methods=["POST"])
+def book_fragment():
+    try:
+        data = request.json or {}
+        focus = (data.get("focus") or "").strip()
+
+        book_content = load_book_text()
+        metadata = get_book_metadata()
+
+        context = build_context(book_content, focus or metadata.get("title"))
+        fragment = (context.get("context") or "")[:480].strip()
+
+        if not fragment:
+            return jsonify({"error": "No se pudo obtener un fragmento del libro."}), 400
+
+        return jsonify({"fragment": fragment}), 200
+
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("Error al obtener fragmento del libro")
+        return jsonify({"error": f"No se pudo obtener el fragmento: {exc}"}), 500
 
 
 @app.route("/use-book", methods=["POST"])
@@ -348,6 +385,68 @@ def generate_questions():
     except Exception as e:
         logger.exception("Error en /generate-questions")
         return jsonify({"error": f"Error en /generate-questions: {str(e)}"}), 500
+
+
+@app.route("/generate-image", methods=["POST"])
+def generate_image():
+    try:
+        data = request.json or {}
+        prompt = (data.get("prompt") or "").strip()
+        if not prompt:
+            return jsonify({"error": "El prompt de la imagen está vacío."}), 400
+
+        age = data.get("age", 9)
+        fragment = (data.get("fragment") or "").strip()
+
+        book_content = load_book_text()
+        metadata = get_book_metadata()
+
+        orchestrator = get_orchestrator()
+        result = orchestrator.handle(
+            {
+                "mode": "imagen",
+                "prompt": prompt,
+                "age": age,
+                "fragment": fragment,
+                "book_text": book_content,
+                "book_title": metadata.get("title"),
+            }
+        )
+
+        image_payload = result.get("image") or {}
+        image_data = image_payload.get("data")
+        if not image_data:
+            return jsonify({"error": "No se recibió la imagen generada."}), 500
+
+        mime_type = image_payload.get("mime_type", "image/png")
+        data_url = f"data:{mime_type};base64,{image_data}"
+        timestamp = datetime.utcnow().isoformat() + "Z"
+
+        response_payload = {
+            "image": {
+                "data_url": data_url,
+                "mime_type": mime_type,
+                "width": image_payload.get("width"),
+                "height": image_payload.get("height"),
+                "timestamp": timestamp,
+                "prompt": result.get("prompt"),
+                "revised_prompt": result.get("revised_prompt"),
+                "fragment": result.get("fragment"),
+            },
+            "trace": result.get("trace"),
+            "usage": result.get("usage"),
+        }
+        return jsonify(response_payload), 200
+
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except EnvironmentError as exc:
+        return jsonify({"error": str(exc)}), 500
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("Error en /generate-image")
+        return jsonify({"error": f"Error al generar imagen: {exc}"}), 500
 
 
 if __name__ == "__main__":
