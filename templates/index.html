@@ -28,6 +28,13 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
         .upload-section {
             background-color: #e8f4fd;
         }
@@ -53,6 +60,29 @@
             cursor: pointer;
             margin: 5px;
         }
+        .description-toggle {
+            background-color: #f0f6ff;
+            color: #1d5270;
+            border: 1px solid rgba(52, 152, 219, 0.35);
+            padding: 8px 14px;
+            border-radius: 6px;
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+        .description-toggle:hover {
+            background-color: #dbeeff;
+        }
+        .description-toggle:focus {
+            outline: 2px solid #3498db;
+            outline-offset: 2px;
+        }
+        .description-toggle__icon {
+            font-size: 1.1rem;
+        }
         button:hover {
             background-color: #2980b9;
         }
@@ -74,6 +104,25 @@
             font-weight: bold;
             display: block;
             margin-top: 10px;
+        }
+        .intro-description {
+            margin: 16px 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .description-content {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(52, 152, 219, 0.15);
+            color: #445869;
+            line-height: 1.5;
+        }
+        .description-content.is-visible {
+            display: block;
         }
         .chat-messages {
             height: 320px;
@@ -484,10 +533,28 @@
 <body>
     <div class="container">
         <h1>📚 Tutor Educativo con IA</h1>
-        <p>Una herramienta interactiva para ayudar a los niños a comprender libros y desarrollar habilidades de lectura.</p>
+        <div class="intro-description">
+            <button type="button" class="description-toggle" data-description-target="introDescription" data-closed-text="Ver descripción general" data-open-text="Ocultar descripción" aria-expanded="false" aria-controls="introDescription">
+                <span class="description-toggle__icon" aria-hidden="true">ℹ️</span>
+                <span class="description-toggle__text">Ver descripción general</span>
+            </button>
+            <div id="introDescription" class="description-content" aria-hidden="true">
+                <p>Este tutor educativo potenciado por IA guía a los niños durante la lectura del libro seleccionado, adaptando las explicaciones, el vocabulario y los apoyos visuales a la edad configurada.</p>
+                <p>Docentes y familias pueden cargar nuevos PDF, reutilizar lecturas guardadas y consultar métricas de uso para acompañar el proceso lector con actividades más personalizadas.</p>
+            </div>
+        </div>
 
         <div class="section upload-section">
-            <h2>📄 Cargar Libro</h2>
+            <div class="section-header">
+                <h2>📄 Cargar Libro</h2>
+                <button type="button" class="description-toggle" data-description-target="uploadDescription" data-closed-text="Ver explicación" data-open-text="Ocultar explicación" aria-expanded="false" aria-controls="uploadDescription">
+                    <span class="description-toggle__icon" aria-hidden="true">ℹ️</span>
+                    <span class="description-toggle__text">Ver explicación</span>
+                </button>
+            </div>
+            <div id="uploadDescription" class="description-content" aria-hidden="true">
+                <p>Gestiona tu biblioteca digital: selecciona libros previamente analizados o sube un nuevo PDF para que el tutor prepare su contenido. Cada carga organiza el material y reinicia los recursos relacionados con la lectura activa.</p>
+            </div>
 
             <div class="upload-group">
                 <h3>Libros existentes</h3>
@@ -510,7 +577,15 @@
         </div>
 
         <div class="section chat-section">
-            <h2>💬 Chat con el Tutor</h2>
+            <div class="section-header">
+                <h2>💬 Chat con el Tutor</h2>
+                <button type="button" class="description-toggle" data-description-target="chatDescription" data-closed-text="Ver explicación" data-open-text="Ocultar explicación" aria-expanded="false" aria-controls="chatDescription">
+                    <span class="description-toggle__icon" aria-hidden="true">ℹ️</span>
+                </button>
+            </div>
+            <div id="chatDescription" class="description-content" aria-hidden="true">
+                <p>Conversa con un tutor virtual que adapta sus respuestas al modo seleccionado y a la edad del lector. Aquí puedes solicitar aclaraciones, ejemplos prácticos y vocabulario comprensible sobre el libro en uso.</p>
+            </div>
             <div class="controls">
                 <div>
                     <label for="modeSelect">Modo de ayuda</label>
@@ -537,7 +612,15 @@
         </div>
 
         <div class="section questions-section">
-            <h2>❓ Preguntas de Comprensión</h2>
+            <div class="section-header">
+                <h2>❓ Preguntas de Comprensión</h2>
+                <button type="button" class="description-toggle" data-description-target="questionsDescription" data-closed-text="Ver explicación" data-open-text="Ocultar explicación" aria-expanded="false" aria-controls="questionsDescription">
+                    <span class="description-toggle__icon" aria-hidden="true">ℹ️</span>
+                </button>
+            </div>
+            <div id="questionsDescription" class="description-content" aria-hidden="true">
+                <p>Genera cuestionarios automáticos basados en el libro y la conversación previa. Úsalo para evaluar la comprensión lectora con preguntas abiertas o de selección que fomenten el análisis del texto.</p>
+            </div>
             <button id="questionsButton" onclick="generateQuestions()">Generar Preguntas</button>
             <div id="questionsLoadingIndicator" class="loading-indicator" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
                 <div class="spinner" aria-hidden="true"></div>
@@ -547,7 +630,15 @@
         </div>
 
         <div class="section image-section">
-            <h2>🎨 Creador Visual del Libro</h2>
+            <div class="section-header">
+                <h2>🎨 Creador Visual del Libro</h2>
+                <button type="button" class="description-toggle" data-description-target="imageDescription" data-closed-text="Ver explicación" data-open-text="Ocultar explicación" aria-expanded="false" aria-controls="imageDescription">
+                    <span class="description-toggle__icon" aria-hidden="true">ℹ️</span>
+                </button>
+            </div>
+            <div id="imageDescription" class="description-content" aria-hidden="true">
+                <p>Diseña ilustraciones inspiradas en la historia para reforzar la imaginación del lector. Puedes redactar tu propio prompt o pedir a la IA que cree uno basado en la idea central del libro y la edad elegida antes de generar la imagen.</p>
+            </div>
             <p class="mode-description">Describe una escena o deja que la IA construya un prompt inspirado en la idea principal del libro para generar ilustraciones acordes a la edad seleccionada.</p>
             <label for="imagePromptInput">Describe la escena o personaje…</label>
             <textarea id="imagePromptInput" rows="4" placeholder="Describe la escena o personaje..." aria-describedby="imageStatus"></textarea>
@@ -564,7 +655,15 @@
         </div>
 
         <div class="section metrics-section">
-            <h2>📈 Métricas y Consumo</h2>
+            <div class="section-header">
+                <h2>📈 Métricas y Consumo</h2>
+                <button type="button" class="description-toggle" data-description-target="metricsDescription" data-closed-text="Ver explicación" data-open-text="Ocultar explicación" aria-expanded="false" aria-controls="metricsDescription">
+                    <span class="description-toggle__icon" aria-hidden="true">ℹ️</span>
+                </button>
+            </div>
+            <div id="metricsDescription" class="description-content" aria-hidden="true">
+                <p>Consulta el seguimiento de tokens, llamadas y tiempos de respuesta para cada herramienta del tutor. Los datos se reinician al cambiar de libro para que puedas medir el progreso de cada lectura por separado.</p>
+            </div>
             <p class="mode-description">Visualiza el uso de tokens, llamadas realizadas y la latencia aproximada de cada solicitud. Se reinicia al activar un libro distinto.</p>
             <div id="metricsSummary" class="metrics-summary"></div>
             <div id="metricsHistory" class="metrics-history" aria-live="polite" aria-atomic="false"></div>
@@ -603,10 +702,38 @@
             vocabulario: 'Identifica palabras retadoras, ofrece significados sencillos y propone usos adaptados a la edad.',
         };
 
+        function initDescriptionToggles() {
+            const toggles = document.querySelectorAll('[data-description-target]');
+            toggles.forEach((button) => {
+                const closedText = button.getAttribute('data-closed-text') || 'Ver explicación';
+                const openText = button.getAttribute('data-open-text') || 'Ocultar explicación';
+                const label = button.querySelector('.description-toggle__text');
+                if (label) {
+                    label.textContent = closedText;
+                }
+                button.setAttribute('aria-expanded', 'false');
+
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-description-target');
+                    if (!targetId) return;
+                    const content = document.getElementById(targetId);
+                    if (!content) return;
+
+                    const isVisible = content.classList.toggle('is-visible');
+                    content.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+                    button.setAttribute('aria-expanded', isVisible ? 'true' : 'false');
+                    if (label) {
+                        label.textContent = isVisible ? openText : closedText;
+                    }
+                });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             refreshBookList();
             initModeDescription();
             initImageCreator();
+            initDescriptionToggles();
             renderMetrics();
         });
 
