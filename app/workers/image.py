@@ -69,7 +69,6 @@ class ImageWorker:
             model="gpt-image-1",
             prompt=composed_prompt,
             size=image_size,
-            quality="standard",
         )
 
         image_data = response.data[0]
