@@ -548,17 +548,17 @@
 
         <div class="section image-section">
             <h2>🎨 Creador Visual del Libro</h2>
-            <p class="mode-description">Describe una escena o toma un fragmento del libro para generar ilustraciones acordes a la edad seleccionada.</p>
+            <p class="mode-description">Describe una escena o deja que la IA construya un prompt inspirado en la idea principal del libro para generar ilustraciones acordes a la edad seleccionada.</p>
             <label for="imagePromptInput">Describe la escena o personaje…</label>
             <textarea id="imagePromptInput" rows="4" placeholder="Describe la escena o personaje..." aria-describedby="imageStatus"></textarea>
             <div class="image-controls">
-                <button id="useFragmentButton" type="button">Usar fragmento del libro</button>
+                <button id="generatePromptButton" type="button">Generar prompt del libro</button>
                 <button id="generateImageButton" type="button">Generar imagen</button>
             </div>
             <div id="imageStatus" class="status-message" aria-live="polite"></div>
             <div id="imageLoadingIndicator" class="loading-indicator" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
                 <div class="spinner" aria-hidden="true"></div>
-                <span>Generando ilustración…</span>
+                <span id="imageLoadingText">Generando ilustración…</span>
             </div>
             <div id="imageGallery" class="image-gallery" aria-live="polite" aria-atomic="false"></div>
         </div>
@@ -586,9 +586,11 @@
         let isQuestionsLoading = false;
         let traceIdCounter = 0;
         let isImageGenerating = false;
-        let lastImageFragment = '';
+        let lastImageContext = '';
         let imageCounter = 0;
         let imageModalPreviousFocus = null;
+
+        const DEFAULT_IMAGE_LOADING_TEXT = 'Generando ilustración…';
 
         const metricsState = {
             tokensByModel: {},
@@ -665,7 +667,7 @@
         }
 
         function clearImageSection() {
-            lastImageFragment = '';
+            lastImageContext = '';
             imageCounter = 0;
             const promptInput = document.getElementById('imagePromptInput');
             if (promptInput) {
@@ -684,11 +686,11 @@
         }
 
         function initImageCreator() {
-            const useFragmentButton = document.getElementById('useFragmentButton');
+            const generatePromptButton = document.getElementById('generatePromptButton');
             const generateButton = document.getElementById('generateImageButton');
 
-            if (useFragmentButton) {
-                useFragmentButton.addEventListener('click', requestImageFragment);
+            if (generatePromptButton) {
+                generatePromptButton.addEventListener('click', generateBookPrompt);
             }
             if (generateButton) {
                 generateButton.addEventListener('click', generateImageFromPrompt);
@@ -720,55 +722,53 @@
             });
         }
 
-        function requestImageFragment() {
+        function generateBookPrompt() {
             if (isImageGenerating) {
                 return;
             }
             if (!currentBookPath) {
-                setImageStatus('Selecciona o carga un libro antes de usar un fragmento.', 'error');
+                setImageStatus('Selecciona o carga un libro antes de generar un prompt.', 'error');
                 return;
             }
 
-            const button = document.getElementById('useFragmentButton');
             const promptInput = document.getElementById('imagePromptInput');
             const focus = promptInput ? promptInput.value.trim() : '';
+            const ageInput = document.getElementById('ageInput');
+            const age = parseInt(ageInput ? ageInput.value : '9', 10) || 9;
 
-            if (button) {
-                button.disabled = true;
-            }
+            setImageStatus('');
+            setImageLoading(true, 'Generando prompt');
 
             fetch('/book-fragment', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ focus })
+                body: JSON.stringify({ focus, age })
             })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.fragment) {
-                        lastImageFragment = data.fragment;
+                    if (data.prompt) {
+                        lastImageContext = data.reference || '';
                         if (promptInput) {
-                            promptInput.value = data.fragment;
+                            promptInput.value = data.prompt;
                             promptInput.focus();
                             const position = promptInput.value.length;
                             if (typeof promptInput.setSelectionRange === 'function') {
                                 promptInput.setSelectionRange(position, position);
                             }
                         }
-                        setImageStatus('Fragmento del libro insertado. Puedes ajustarlo antes de generar.', 'success');
+                        setImageStatus('Prompt generado a partir de la idea principal del libro. Puedes ajustarlo antes de generar.', 'success');
                     } else {
-                        setImageStatus(data.error || 'No se pudo obtener un fragmento del libro.', 'error');
+                        setImageStatus(data.error || 'No se pudo generar el prompt del libro.', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    setImageStatus('Error al obtener fragmento del libro.', 'error');
+                    setImageStatus('Error al generar el prompt del libro.', 'error');
                 })
                 .finally(() => {
-                    if (button && !isImageGenerating) {
-                        button.disabled = false;
-                    }
+                    setImageLoading(false);
                 });
         }
 
@@ -783,23 +783,31 @@
             container.innerHTML = `<div class="${statusClass}">${escapeHtml(message)}</div>`;
         }
 
-        function setImageLoading(isLoading) {
+        function setImageLoading(isLoading, message) {
             isImageGenerating = isLoading;
             const generateButton = document.getElementById('generateImageButton');
-            const useFragmentButton = document.getElementById('useFragmentButton');
+            const generatePromptButton = document.getElementById('generatePromptButton');
             const indicator = document.getElementById('imageLoadingIndicator');
             const promptInput = document.getElementById('imagePromptInput');
             const gallery = document.getElementById('imageGallery');
+            const indicatorText = document.getElementById('imageLoadingText');
 
             if (generateButton) {
                 generateButton.disabled = isLoading;
             }
-            if (useFragmentButton) {
-                useFragmentButton.disabled = isLoading;
+            if (generatePromptButton) {
+                generatePromptButton.disabled = isLoading;
             }
             if (indicator) {
                 indicator.classList.toggle('is-active', isLoading);
                 indicator.setAttribute('aria-hidden', String(!isLoading));
+            }
+            if (indicatorText) {
+                if (isLoading) {
+                    indicatorText.textContent = message || DEFAULT_IMAGE_LOADING_TEXT;
+                } else {
+                    indicatorText.textContent = DEFAULT_IMAGE_LOADING_TEXT;
+                }
             }
             if (promptInput) {
                 promptInput.setAttribute('aria-busy', String(isLoading));
@@ -823,16 +831,16 @@
             const prompt = promptInput ? promptInput.value.trim() : '';
 
             if (!prompt) {
-                setImageStatus('Escribe una descripción o usa un fragmento del libro para generar la imagen.', 'error');
+                setImageStatus('Escribe una descripción o genera un prompt del libro antes de crear la imagen.', 'error');
                 return;
             }
 
             setImageStatus('');
-            setImageLoading(true);
+            setImageLoading(true, DEFAULT_IMAGE_LOADING_TEXT);
 
             const payload = {
                 prompt,
-                fragment: lastImageFragment,
+                fragment: lastImageContext,
                 age: parseInt(ageInput ? ageInput.value : '9', 10) || 9,
             };
 
@@ -850,7 +858,7 @@
                     recordMetrics('image', data.usage, startedAt);
                     if (data.image && data.image.data_url) {
                         appendImageCard(data.image, data.trace);
-                        lastImageFragment = data.image.fragment || lastImageFragment;
+                        lastImageContext = data.image.fragment || lastImageContext;
                         setImageStatus('Imagen lista. Puedes descargarla o generar otra variación.', 'success');
                     } else {
                         setImageStatus(data.error || 'No se pudo generar la imagen.', 'error');
