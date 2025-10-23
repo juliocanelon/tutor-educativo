@@ -5,6 +5,8 @@ from typing import Any, Dict
 
 from openai import OpenAI
 
+from app.utils.usage import extract_usage
+
 
 CHECKLISTS = {
     "TutorWorker": ["anchored", "clarity", "structure", "safety"],
@@ -62,6 +64,7 @@ class ResponseEvaluator:
         )
 
         raw = completion.choices[0].message.content.strip()
+        usage = extract_usage(completion)
         try:
             parsed = json.loads(raw)
         except json.JSONDecodeError:
@@ -76,4 +79,5 @@ class ResponseEvaluator:
             "feedback": parsed.get("feedback", ""),
             "passed": passed,
             "raw": raw,
+            "usage": usage,
         }

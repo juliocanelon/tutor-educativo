@@ -9,6 +9,8 @@ Aplicación web construida con **Flask** y la **API de OpenAI** que guía a niñ
 - 🔖 **Respuestas con anclaje**: el tutor cita fragmentos del libro y propone mini-preguntas de seguimiento.
 - 🗂️ **Trazabilidad**: el frontend muestra el worker utilizado, resultados del checklist y número de reintentos.
 - 🎯 **Preguntas por niveles**: los cuestionarios se agrupan en bloques literal, inferencial y crítico con retroalimentación para el docente.
+- 💬 **UX dinámica**: el chat conserva el historial con scroll, muestra una descripción contextual del modo de ayuda, limpia el historial al activar un libro y permite desplegar/ocultar trazas por bloque.
+- 🧮 **Métricas en vivo**: panel de consumo que detalla tokens por modelo, latencia y número de llamadas por sección; se reinicia al seleccionar o cargar un nuevo libro.
 
 ---
 
@@ -86,16 +88,17 @@ app/
 
 ## 🖥️ Interfaz
 
-- Modo de ayuda y edad configurables antes de cada mensaje.
-- El chat muestra la respuesta del agente, la cita del libro utilizada y la traza (`worker`, checklist y reintentos).
-- El generador de preguntas también expone la traza para facilitar auditorías educativas.
-- Mejoras de UX: chat con scroll/autoscroll, render Markdown y estado de “pensando”.
+- Modo de ayuda y edad configurables antes de cada mensaje con una breve descripción contextual del modo elegido.
+- El chat conserva el historial con scroll, cita el libro utilizado, adapta el tono a la edad y permite desplegar/ocultar la traza por mensaje.
+- El generador de preguntas acumula resultados, renderiza Markdown y ofrece trazas plegables por bloque.
+- Indicadores de “pensando” deshabilitan temporalmente los botones para evitar envíos duplicados.
+- Sección de **Métricas y Consumo** con resumen de tokens por modelo, latencias aproximadas y contador de llamadas; los datos se reinician al activar un nuevo libro.
 
 ### Gestión de libros (seleccionar / cargar / eliminar)
 
 - La tarjeta **Cargar Libro** lista automáticamente los PDFs existentes en `uploads/` (los más recientes primero).
 - Desde el selector puedes **usar** un libro existente (actualiza la sesión activa) o **eliminarlo** tras confirmar.
-- La subida de nuevos PDFs mantiene las validaciones previas y añade un sufijo único cuando existe colisión de nombres.
+- La subida de nuevos PDFs mantiene las validaciones previas, añade un sufijo único cuando existe colisión de nombres y limpia de inmediato el chat, las preguntas y las métricas activas.
 - Si el libro seleccionado se elimina, el sistema limpia la sesión y el chat indicará que no hay libro disponible hasta elegir otro.
 
 ---

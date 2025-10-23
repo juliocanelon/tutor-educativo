@@ -32,7 +32,7 @@
             background-color: #e8f4fd;
         }
         .chat-section {
-            background-color: #f0f8f0;
+            background-color: #e9f2ff;
         }
         .questions-section {
             background-color: #fff8e1;
@@ -91,6 +91,11 @@
             margin: 5px 0;
             border-radius: 5px;
         }
+        .message.error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            text-align: left;
+        }
         .message-content {
             white-space: pre-wrap;
         }
@@ -99,7 +104,7 @@
             text-align: right;
         }
         .assistant-message {
-            background-color: #f3e5f5;
+            background-color: #f0f4ff;
             text-align: left;
         }
         .error {
@@ -109,6 +114,11 @@
         .success {
             background-color: #e8f5e8;
             color: #2e7d32;
+        }
+        .mode-description {
+            font-size: 0.9rem;
+            color: #445869;
+            margin: 4px 0 12px;
         }
         .message-content.rich-content {
             white-space: normal;
@@ -166,11 +176,50 @@
             border-top: 1px dashed rgba(0,0,0,0.1);
             font-size: 0.85rem;
             color: #4a4a4a;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .trace-toggle {
+            align-self: flex-start;
+            background: none;
+            border: none;
+            color: #2c3e50;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 0;
+        }
+        .trace-toggle:hover,
+        .trace-toggle:focus {
+            color: #1b6ca8;
+            outline: none;
+        }
+        .trace-details {
+            display: none;
+            line-height: 1.4;
+        }
+        .trace-details.is-visible {
+            display: block;
         }
         .anchor {
             margin-top: 6px;
             font-style: italic;
             color: #6d4c41;
+        }
+        .questions-results {
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 6px;
+            margin-top: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+        .questions-block {
+            margin: 12px;
         }
         .loading-indicator {
             display: flex;
@@ -198,6 +247,77 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        .metrics-section {
+            background-color: #f7f4ff;
+        }
+        .metrics-summary {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .metric-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .metric-pill {
+            flex: 1 1 140px;
+            background: rgba(52, 152, 219, 0.12);
+            color: #1d5270;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .metric-pill strong {
+            font-weight: 700;
+        }
+        .metric-group {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .metric-group h4 {
+            margin: 0 0 8px;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+        .metric-group ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .metric-group li {
+            margin-bottom: 4px;
+        }
+        .metrics-history {
+            margin-top: 16px;
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px;
+        }
+        .history-item {
+            border-bottom: 1px dashed rgba(0,0,0,0.12);
+            padding: 8px 0;
+        }
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        .history-item strong {
+            color: #2c3e50;
+        }
+        .history-details {
+            margin-top: 4px;
+            font-size: 0.85rem;
+            color: #4a4a4a;
+        }
+        .empty-state {
+            margin: 0;
+            color: #607080;
+        }
         .sr-only {
             position: absolute;
             width: 1px;
@@ -208,6 +328,11 @@
             clip: rect(0, 0, 0, 0);
             white-space: nowrap;
             border: 0;
+        }
+        @media (max-width: 600px) {
+            .questions-results {
+                max-height: 260px;
+            }
         }
     </style>
 </head>
@@ -254,6 +379,7 @@
                     <input type="number" id="ageInput" min="5" max="16" value="9">
                 </div>
             </div>
+            <p id="modeDescription" class="mode-description" aria-live="polite"></p>
             <div id="chatMessages" class="chat-messages" aria-live="polite" aria-atomic="false"></div>
             <div id="chatLoadingIndicator" class="loading-indicator" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
                 <div class="spinner" aria-hidden="true"></div>
@@ -272,7 +398,14 @@
                 <div class="spinner" aria-hidden="true"></div>
                 <span>Generando preguntas…</span>
             </div>
-            <div id="questionsResult"></div>
+            <div id="questionsResult" class="questions-results" aria-live="polite" aria-atomic="false"></div>
+        </div>
+
+        <div class="section metrics-section">
+            <h2>📈 Métricas y Consumo</h2>
+            <p class="mode-description">Visualiza el uso de tokens, llamadas realizadas y la latencia aproximada de cada solicitud. Se reinicia al activar un libro distinto.</p>
+            <div id="metricsSummary" class="metrics-summary"></div>
+            <div id="metricsHistory" class="metrics-history" aria-live="polite" aria-atomic="false"></div>
         </div>
     </div>
 
@@ -281,14 +414,90 @@
         let currentBookTitle = null;
         let isChatLoading = false;
         let isQuestionsLoading = false;
+        let traceIdCounter = 0;
+
+        const metricsState = {
+            tokensByModel: {},
+            callsBySection: { chat: 0, questions: 0 },
+            history: [],
+        };
+
+        const modeDescriptions = {
+            explicar: 'Explica el fragmento con ejemplos y lenguaje acorde a la edad seleccionada.',
+            vocabulario: 'Identifica palabras retadoras, ofrece significados sencillos y propone usos adaptados a la edad.',
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             refreshBookList();
+            initModeDescription();
+            renderMetrics();
         });
 
-        function setCurrentBook(path, title) {
+        function initModeDescription() {
+            const modeSelect = document.getElementById('modeSelect');
+            if (!modeSelect) return;
+            modeSelect.addEventListener('change', updateModeDescription);
+            updateModeDescription();
+        }
+
+        function updateModeDescription() {
+            const modeSelect = document.getElementById('modeSelect');
+            const description = document.getElementById('modeDescription');
+            if (!modeSelect || !description) return;
+            const text = modeDescriptions[modeSelect.value] || 'Selecciona el modo que necesitas.';
+            description.textContent = text;
+        }
+
+        function setCurrentBook(path, title, options = {}) {
+            const previousPath = currentBookPath;
             currentBookPath = path;
             currentBookTitle = title;
+            const changed = previousPath !== path;
+
+            if (changed) {
+                resetMetrics();
+            }
+
+            if ((options.clearHistory && changed) || (!path && previousPath)) {
+                clearChatHistory();
+                clearQuestionsHistory();
+            }
+
+            const select = document.getElementById('bookSelect');
+            if (select && currentBookPath) {
+                const matchingOption = Array.from(select.options).find(option => option.value === currentBookPath);
+                if (matchingOption) {
+                    matchingOption.selected = true;
+                }
+            }
+        }
+
+        function clearChatHistory() {
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML = '';
+                chatMessages.scrollTop = 0;
+            }
+        }
+
+        function clearQuestionsHistory() {
+            const container = document.getElementById('questionsResult');
+            if (container) {
+                container.innerHTML = '';
+                container.scrollTop = 0;
+            }
+        }
+
+        function scrollToBottom(element) {
+            if (!element) return;
+            const scrollAction = () => {
+                element.scrollTop = element.scrollHeight;
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scrollAction);
+            } else {
+                scrollAction();
+            }
         }
 
         function refreshBookList() {
@@ -323,33 +532,36 @@
                 option.selected = true;
                 select.appendChild(option);
                 select.disabled = true;
-                setCurrentBook(null, null);
+                setCurrentBook(null, null, { clearHistory: true });
                 useButton.disabled = true;
                 deleteButton.disabled = true;
                 return;
             }
 
-            let hasSelected = false;
+            let selectedItem = null;
             items.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.path;
                 option.textContent = `${item.name} (${formatFileSize(item.size)})`;
-                if (item.selected) {
+                const matchesCurrent = currentBookPath && item.path === currentBookPath;
+                if (item.selected || matchesCurrent) {
                     option.selected = true;
-                    hasSelected = true;
-                    setCurrentBook(item.path, item.name);
+                    selectedItem = item;
                 }
                 select.appendChild(option);
             });
 
-            if (!hasSelected) {
-                select.selectedIndex = 0;
-            }
-
             useButton.disabled = false;
             deleteButton.disabled = false;
 
-            if (!hasSelected) {
+            if (selectedItem) {
+                setCurrentBook(selectedItem.path, selectedItem.name);
+            } else if (select.options.length) {
+                select.selectedIndex = 0;
+                const selected = select.options[0];
+                const firstItem = items[0];
+                setCurrentBook(selected ? selected.value : null, firstItem ? firstItem.name : null);
+            } else {
                 setCurrentBook(null, null);
             }
         }
@@ -386,7 +598,7 @@
             .then(data => {
                 if (data.success) {
                     showMessage('uploadStatus', `Libro "${data.title}" cargado exitosamente`, 'success');
-                    setCurrentBook(data.path || null, data.title || null);
+                    setCurrentBook(data.path || null, data.title || null, { clearHistory: true });
                     refreshBookList();
                     fileInput.value = '';
                 } else {
@@ -419,7 +631,7 @@
             .then(data => {
                 if (data.success) {
                     showMessage('bookStatus', `Libro "${data.title}" seleccionado`, 'success');
-                    setCurrentBook(data.path || path, data.title || null);
+                    setCurrentBook(data.path || path, data.title || null, { clearHistory: true });
                     refreshBookList();
                 } else {
                     showMessage('bookStatus', data.error || 'No se pudo seleccionar el libro.', 'error');
@@ -456,7 +668,7 @@
                 if (data.success) {
                     showMessage('bookStatus', 'Libro eliminado correctamente.', 'success');
                     if (currentBookPath === path) {
-                        setCurrentBook(null, null);
+                        setCurrentBook(null, null, { clearHistory: true });
                     }
                     refreshBookList();
                 } else {
@@ -486,6 +698,8 @@
             messageInput.value = '';
             setChatLoading(true);
 
+            const startedAt = performance.now();
+
             fetch('/chat', {
                 method: 'POST',
                 headers: {
@@ -499,6 +713,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                recordMetrics('chat', data.usage, startedAt);
                 if (data.response) {
                     addMessage(data.response, 'assistant', data.trace, data.anchor);
                 } else {
@@ -508,6 +723,7 @@
             .catch(error => {
                 addMessage('Error de conexión', 'error');
                 console.error('Error:', error);
+                recordMetrics('chat', null, startedAt);
             })
             .finally(() => {
                 setChatLoading(false);
@@ -519,11 +735,12 @@
                 return;
             }
             if (!currentBookPath) {
-                showMessage('questionsResult', 'No hay libro cargado o seleccionado.', 'error');
+                appendQuestionsBlock('No hay libro cargado o seleccionado.', 'error');
                 return;
             }
 
             const ageInput = document.getElementById('ageInput');
+            const startedAt = performance.now();
             setQuestionsLoading(true);
             fetch('/generate-questions', {
                 method: 'POST',
@@ -536,31 +753,17 @@
             })
             .then(response => response.json())
             .then(data => {
-                const container = document.getElementById('questionsResult');
-                container.innerHTML = '';
-
+                recordMetrics('questions', data.usage, startedAt);
                 if (data.questions) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'message success';
-
-                    const content = document.createElement('div');
-                    content.className = 'message-content';
-                    content.classList.add('rich-content');
-                    content.innerHTML = renderMarkdown(data.questions);
-                    wrapper.appendChild(content);
-
-                    if (data.trace) {
-                        wrapper.appendChild(buildTraceElement(data.trace));
-                    }
-
-                    container.appendChild(wrapper);
+                    appendQuestionsBlock(data.questions, 'success', data.trace);
                 } else {
-                    showMessage('questionsResult', data.error || 'Error al generar preguntas', 'error');
+                    appendQuestionsBlock(data.error || 'Error al generar preguntas', 'error');
                 }
             })
             .catch(error => {
-                showMessage('questionsResult', 'Error de conexión', 'error');
+                appendQuestionsBlock('Error de conexión', 'error');
                 console.error('Error:', error);
+                recordMetrics('questions', null, startedAt);
             })
             .finally(() => {
                 setQuestionsLoading(false);
@@ -594,7 +797,153 @@
             }
 
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            scrollToBottom(chatMessages);
+        }
+
+        function appendQuestionsBlock(text, status, trace = null) {
+            const container = document.getElementById('questionsResult');
+            if (!container) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = `message ${status === 'error' ? 'error' : 'success'} questions-block`;
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            if (status === 'error') {
+                content.textContent = text;
+            } else {
+                content.classList.add('rich-content');
+                content.innerHTML = renderMarkdown(text);
+            }
+            wrapper.appendChild(content);
+
+            if (trace && status !== 'error') {
+                wrapper.appendChild(buildTraceElement(trace));
+            }
+
+            container.appendChild(wrapper);
+            scrollToBottom(container);
+        }
+
+        function recordMetrics(section, usage, startedAt) {
+            const latency = typeof startedAt === 'number' ? performance.now() - startedAt : 0;
+            updateMetrics(section, usage, latency);
+        }
+
+        function updateMetrics(section, usageEvents, latencyMs) {
+            const normalizedUsage = Array.isArray(usageEvents)
+                ? usageEvents.filter(Boolean)
+                : usageEvents
+                    ? [usageEvents]
+                    : [];
+            const latency = typeof latencyMs === 'number' && !Number.isNaN(latencyMs) ? latencyMs : 0;
+
+            metricsState.callsBySection[section] = (metricsState.callsBySection[section] || 0) + 1;
+
+            normalizedUsage.forEach(event => {
+                const model = event.model || 'desconocido';
+                const promptTokens = Number(event.prompt_tokens || 0);
+                const completionTokens = Number(event.completion_tokens || 0);
+                const totalTokens = Number(event.total_tokens || promptTokens + completionTokens);
+
+                if (!metricsState.tokensByModel[model]) {
+                    metricsState.tokensByModel[model] = { prompt: 0, completion: 0, total: 0 };
+                }
+
+                metricsState.tokensByModel[model].prompt += promptTokens;
+                metricsState.tokensByModel[model].completion += completionTokens;
+                metricsState.tokensByModel[model].total += totalTokens;
+            });
+
+            metricsState.history.push({
+                section,
+                latencyMs: latency,
+                usage: normalizedUsage,
+                timestamp: new Date(),
+            });
+
+            if (metricsState.history.length > 60) {
+                metricsState.history.splice(0, metricsState.history.length - 60);
+            }
+
+            renderMetrics();
+        }
+
+        function resetMetrics() {
+            metricsState.tokensByModel = {};
+            metricsState.callsBySection = { chat: 0, questions: 0 };
+            metricsState.history = [];
+            renderMetrics();
+        }
+
+        function renderMetrics() {
+            const summary = document.getElementById('metricsSummary');
+            const history = document.getElementById('metricsHistory');
+            if (!summary || !history) {
+                return;
+            }
+
+            const chatCalls = metricsState.callsBySection.chat || 0;
+            const questionCalls = metricsState.callsBySection.questions || 0;
+            const tokensEntries = Object.entries(metricsState.tokensByModel);
+
+            const tokensMarkup = tokensEntries.length
+                ? `<ul>${tokensEntries
+                    .map(([model, totals]) => `<li><strong>${escapeHtml(model)}</strong>: ${totals.total} tokens (prompt ${totals.prompt}, respuesta ${totals.completion})</li>`)
+                    .join('')}</ul>`
+                : '<p class="empty-state">Aún no hay consumo registrado.</p>';
+
+            summary.innerHTML = `
+                <div class="metric-row">
+                    <div class="metric-pill">💬 Chat <strong>${chatCalls}</strong></div>
+                    <div class="metric-pill">❓ Preguntas <strong>${questionCalls}</strong></div>
+                </div>
+                <div class="metric-group">
+                    <h4>Consumo por modelo</h4>
+                    ${tokensMarkup}
+                </div>
+            `;
+
+            const recentHistory = metricsState.history.slice(-6).reverse();
+            if (!recentHistory.length) {
+                history.innerHTML = '<p class="empty-state">Envía un mensaje o genera preguntas para ver estadísticas.</p>';
+                return;
+            }
+
+            history.innerHTML = recentHistory
+                .map(entry => {
+                    const sectionLabel = entry.section === 'chat' ? 'Chat' : 'Preguntas';
+                    const timeLabel = escapeHtml(entry.timestamp.toLocaleTimeString());
+                    const totalTokens = entry.usage.reduce((acc, event) => acc + Number(event.total_tokens || 0), 0);
+                    const detailLines = entry.usage.length
+                        ? entry.usage.map(event => {
+                            const stage = event.stage || 'worker';
+                            const model = event.model || 'desconocido';
+                            const total = Number(event.total_tokens || 0);
+                            return `${stage} · ${model}: ${total} tokens`;
+                        })
+                        : ['Sin consumo reportado.'];
+                    const detailHtml = detailLines
+                        .map(line => `<div>${escapeHtml(line)}</div>`)
+                        .join('');
+                    return `
+                        <div class="history-item">
+                            <div><strong>${sectionLabel}</strong> · ${formatLatency(entry.latencyMs)} · ${timeLabel} · ${totalTokens} tokens</div>
+                            <div class="history-details">${detailHtml}</div>
+                        </div>
+                    `;
+                })
+                .join('');
+        }
+
+        function formatLatency(latencyMs) {
+            if (!latencyMs || Number.isNaN(latencyMs)) {
+                return '0 ms';
+            }
+            if (latencyMs >= 1000) {
+                return `${(latencyMs / 1000).toFixed(1)} s`;
+            }
+            return `${Math.round(latencyMs)} ms`;
         }
 
         function escapeHtml(str) {
@@ -616,12 +965,48 @@
             return escaped;
         }
 
+        function normalizeOrderedLists(markdownText) {
+            if (!markdownText) {
+                return markdownText;
+            }
+
+            const lines = markdownText.replace(/\r\n/g, '\n').split('\n');
+            let inList = false;
+            let counter = 0;
+
+            const normalizedLines = lines.map(line => {
+                const match = line.match(/^(\s*)(\d+)[\.)]\s+(.*)$/);
+                if (match) {
+                    const [, indent, digits, content] = match;
+                    if (digits.length > 2) {
+                        inList = false;
+                        counter = 0;
+                        return line;
+                    }
+
+                    if (!inList) {
+                        inList = true;
+                        counter = 1;
+                    } else {
+                        counter += 1;
+                    }
+                    return `${indent}${counter}. ${content}`;
+                }
+
+                inList = false;
+                counter = 0;
+                return line;
+            });
+
+            return normalizedLines.join('\n');
+        }
+
         function renderMarkdown(markdownText) {
             if (!markdownText) {
                 return '';
             }
-
-            const lines = markdownText.replace(/\r\n/g, '\n').split('\n');
+            const normalizedText = normalizeOrderedLists(markdownText) || '';
+            const lines = normalizedText.replace(/\r\n/g, '\n').split('\n');
             let html = '';
             let inUnorderedList = false;
             let inOrderedList = false;
@@ -711,44 +1096,106 @@
             const sendButton = document.getElementById('sendButton');
             const messageInput = document.getElementById('messageInput');
             const indicator = document.getElementById('chatLoadingIndicator');
+            const chatMessages = document.getElementById('chatMessages');
 
             sendButton.disabled = isLoading;
             messageInput.setAttribute('aria-busy', String(isLoading));
             indicator.classList.toggle('is-active', isLoading);
             indicator.setAttribute('aria-hidden', String(!isLoading));
+            if (chatMessages) {
+                chatMessages.setAttribute('aria-busy', String(isLoading));
+            }
         }
 
         function setQuestionsLoading(isLoading) {
             isQuestionsLoading = isLoading;
             const button = document.getElementById('questionsButton');
             const indicator = document.getElementById('questionsLoadingIndicator');
+            const container = document.getElementById('questionsResult');
 
             button.disabled = isLoading;
             indicator.classList.toggle('is-active', isLoading);
             indicator.setAttribute('aria-hidden', String(!isLoading));
+            if (container) {
+                container.setAttribute('aria-busy', String(isLoading));
+            }
         }
 
         function buildTraceElement(trace) {
             const traceDiv = document.createElement('div');
             traceDiv.className = 'trace';
 
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'trace-toggle';
+            const detailsId = `trace-details-${traceIdCounter++}`;
+            toggle.setAttribute('aria-controls', detailsId);
+            toggle.setAttribute('aria-expanded', 'false');
+
+            const iconSpan = document.createElement('span');
+            iconSpan.setAttribute('aria-hidden', 'true');
+            iconSpan.textContent = '🧭';
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = 'Ver trazas';
+            toggle.append(iconSpan, labelSpan);
+
+            const details = document.createElement('div');
+            details.className = 'trace-details';
+            details.id = detailsId;
+            details.setAttribute('hidden', 'true');
+
             const checks = trace.checks || {};
             const checkEntries = Object.entries(checks);
+            const checklistLabels = {
+                anchored: 'Anclaje',
+                clarity: 'Claridad',
+                safety: 'Seguridad',
+                structure: 'Estructura',
+            };
             const checksText = checkEntries.length
-                ? checkEntries.map(([name, passed]) => `${passed ? '✔️' : '⚠️'} ${name}`).join(' · ')
+                ? checkEntries
+                    .map(([name, passed]) => {
+                        const label = checklistLabels[name] || name;
+                        const normalized = typeof passed === 'string'
+                            ? passed.toLowerCase()
+                            : passed;
+                        const isPassed = normalized === true || normalized === 'pass' || normalized === 'passed' || normalized === 'ok' || normalized === 'success';
+                        const icon = isPassed ? '✔️' : '⚠️';
+                        return `${icon} ${label}`;
+                    })
+                    .join(' · ')
                 : 'Sin datos de validación';
 
             const lines = [
                 `Agente: ${trace.worker || 'N/A'}`,
                 `Reintentos: ${trace.retries ?? 0}`,
-                `Checklist: ${checksText}`
+                `Checklist: ${checksText}`,
             ];
 
             if (trace.feedback) {
                 lines.push(`Feedback: ${trace.feedback}`);
             }
 
-            traceDiv.textContent = lines.join(' | ');
+            lines.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.textContent = line;
+                details.appendChild(lineDiv);
+            });
+
+            toggle.addEventListener('click', () => {
+                const isVisible = details.classList.toggle('is-visible');
+                if (isVisible) {
+                    details.removeAttribute('hidden');
+                    toggle.setAttribute('aria-expanded', 'true');
+                    labelSpan.textContent = 'Ocultar trazas';
+                } else {
+                    details.setAttribute('hidden', 'true');
+                    toggle.setAttribute('aria-expanded', 'false');
+                    labelSpan.textContent = 'Ver trazas';
+                }
+            });
+
+            traceDiv.append(toggle, details);
             return traceDiv;
         }
 

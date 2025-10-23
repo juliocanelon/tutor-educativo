@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from app.nlp.rag import build_context
 from app.quality.evaluator import ResponseEvaluator
@@ -55,16 +55,36 @@ class Orchestrator:
 
         attempt = worker.run(message=message, age=age, context=context, metadata=metadata)
         candidate = attempt.get("content", "")
+        usage_events: List[Dict[str, Any]] = []
+
+        if attempt.get("usage"):
+            usage_events.append(
+                {
+                    **attempt["usage"],
+                    "stage": worker_name,
+                    "retry": 0,
+                }
+            )
+
         evaluation = self.evaluator.evaluate(
             worker_name=worker_name,
             candidate=candidate,
             context=context,
         )
 
+        if evaluation.get("usage"):
+            usage_events.append(
+                {
+                    **evaluation["usage"],
+                    "stage": "evaluation",
+                    "retry": 0,
+                }
+            )
+
         retries = 0
         while not evaluation.get("passed", False) and retries < self.max_retries:
             LOGGER.info("Optimizer triggered for %s (retry %s)", worker_name, retries + 1)
-            candidate = self.optimizer.optimise(
+            optimisation = self.optimizer.optimise(
                 worker_name=worker_name,
                 previous_answer=candidate,
                 evaluation=evaluation,
@@ -73,11 +93,34 @@ class Orchestrator:
                 message=message,
                 metadata=metadata,
             )
+            if isinstance(optimisation, dict):
+                candidate = optimisation.get("content", "")
+                optimisation_usage = optimisation.get("usage")
+            else:  # pragma: no cover - backward compatibility
+                candidate = optimisation
+                optimisation_usage = None
+
+            if optimisation_usage:
+                usage_events.append(
+                    {
+                        **optimisation_usage,
+                        "stage": "optimizer",
+                        "retry": retries + 1,
+                    }
+                )
             evaluation = self.evaluator.evaluate(
                 worker_name=worker_name,
                 candidate=candidate,
                 context=context,
             )
+            if evaluation.get("usage"):
+                usage_events.append(
+                    {
+                        **evaluation["usage"],
+                        "stage": "evaluation",
+                        "retry": retries + 1,
+                    }
+                )
             retries += 1
 
         trace = {
@@ -87,4 +130,9 @@ class Orchestrator:
             "feedback": evaluation.get("feedback", ""),
         }
 
-        return {"content": candidate, "trace": trace, "anchor": attempt.get("anchor", "")}
+        return {
+            "content": candidate,
+            "trace": trace,
+            "anchor": attempt.get("anchor", ""),
+            "usage": usage_events,
+        }
