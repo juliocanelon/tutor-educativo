@@ -64,11 +64,12 @@ class ImageWorker:
             fragment=fragment or context.get("context", ""),
         )
 
+        image_size = "1024x1024"
         response = self.client.images.generate(
             model="gpt-image-1",
             prompt=composed_prompt,
-            size="1024x1024",
-            response_format="b64_json",
+            size=image_size,
+            quality="standard",
         )
 
         image_data = response.data[0]
@@ -77,6 +78,12 @@ class ImageWorker:
 
         if not image_b64:
             raise RuntimeError("La generación de imagen no devolvió datos válidos.")
+
+        try:
+            width_str, height_str = image_size.split("x", maxsplit=1)
+            width, height = int(width_str), int(height_str)
+        except ValueError:  # pragma: no cover - defensive fallback
+            width = height = 1024
 
         usage = {
             "model": getattr(response, "model", "gpt-image-1"),
@@ -88,8 +95,8 @@ class ImageWorker:
         payload: Dict[str, Any] = {
             "image_b64": image_b64,
             "mime_type": "image/png",
-            "width": 1024,
-            "height": 1024,
+            "width": width,
+            "height": height,
             "prompt_used": composed_prompt,
             "revised_prompt": revised_prompt,
             "usage": usage,
