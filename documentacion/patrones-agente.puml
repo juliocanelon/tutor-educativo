@@ -1,0 +1,75 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Arial"
+skinparam ArrowColor #444444
+skinparam class {
+  BackgroundColor<<Mediator>> #F2F5FF
+  BackgroundColor<<Strategy>> #FDF6E3
+  BackgroundColor<<QualityLoop>> #F8F1FF
+}
+
+package "Coordinación del agente" {
+  class Orchestrator <<Mediator>> {
+    +handle(payload)
+    +_handle_image(worker, payload)
+    -_resolve_worker_name(mode)
+  }
+
+  interface Worker <<Strategy>> {
+    +run(...)
+  }
+
+  class TutorWorker
+  class VocabWorker
+  class EvalWorker
+  class ImageWorker
+
+  Worker <|.. TutorWorker
+  Worker <|.. VocabWorker
+  Worker <|.. EvalWorker
+  Worker <|.. ImageWorker
+
+  Orchestrator --> Worker : selecciona estrategia\nsegún modo solicitado
+  note right of Orchestrator
+    Mediator / Facade que centraliza
+    el flujo de solicitudes y encapsula
+    la coordinación entre componentes.
+  end note
+
+  note right of Worker
+    Estrategia: cada Worker implementa
+    la operación run con prompts y
+    ajustes especializados.
+  end note
+}
+
+package "Bucle de calidad" {
+  class ResponseEvaluator <<QualityLoop>> {
+    +evaluate(worker_name, candidate, context)
+  }
+  class ResponseOptimizer <<QualityLoop>> {
+    +optimise(worker_name, previous_answer, evaluation, context, age, message, metadata)
+  }
+  class ImagePromptEvaluator <<QualityLoop>> {
+    +evaluate(prompt, age, metadata, fragment)
+  }
+  class ImagePromptOptimizer <<QualityLoop>> {
+    +optimise(prompt, age, metadata, fragment, evaluation)
+  }
+
+  Orchestrator --> ResponseEvaluator : valida respuesta
+  ResponseEvaluator --> Orchestrator : feedback (checks, passed)
+  Orchestrator --> ResponseOptimizer : solicita mejoras
+  ResponseOptimizer --> Orchestrator : devuelve candidato optimizado
+  Orchestrator --> ImagePromptEvaluator : evalúa prompt de imagen
+  ImagePromptEvaluator --> Orchestrator : feedback iterativo
+  Orchestrator --> ImagePromptOptimizer : refina prompt
+  ImagePromptOptimizer --> Orchestrator : nuevo prompt / notas
+
+  note "Pattern: Quality Feedback Loop\nItera entre evaluación y optimización\nhasta cumplir criterios" as qualityNote
+  qualityNote .. ResponseEvaluator
+}
+
+Orchestrator ..> build_context : usa contexto RAG
+
+@enduml
